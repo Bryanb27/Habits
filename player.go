@@ -15,7 +15,8 @@ type Player struct {
 	age       int
 	email     string
 	password  string
-	Character Character
+	character Character
+	habits    []Habit
 }
 
 func (p *Player) setName(name string) {
@@ -55,4 +56,12 @@ func (p *Player) setPassword(password string) error {
 func (p *Player) checkPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(p.password), []byte(password))
 	return err == nil
+}
+
+func (p *Player) addHabit(habit Habit) {
+	p.habits = append(p.habits, habit)
+}
+
+func (p *Player) getHabits() []Habit {
+	return p.habits
 }

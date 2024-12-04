@@ -1,8 +1,21 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"math/rand"
+	"time"
 )
+
+// Fixing some crazy stuff
+func clearBuffer(reader *bufio.Reader) {
+	for {
+		_, err := reader.ReadByte()
+		if err != nil {
+			break
+		}
+	}
+}
 
 func createUser() *Player {
 	//data definition
@@ -37,6 +50,66 @@ func createUser() *Player {
 	return &p
 }
 
+func createNewHabit(user *Player) {
+	title := ""
+	description := ""
+	positive := false
+	rand.Seed(time.Now().UnixNano()) // Using this for id for now
+
+	fmt.Print("What is the habit title: ")
+	fmt.Scan(&title)
+
+	fmt.Print("Give it a description: ")
+	fmt.Scan(&description)
+
+	fmt.Print("Is it positive? Yes[1] or No[0]: ")
+	var pos int
+	fmt.Scan(&pos)
+	if pos > 0 {
+		positive = true
+	} else {
+		positive = false
+	}
+	habit := Habit{rand.Int(), title, description, positive, 0}
+	user.habits = append(user.habits, habit)
+	fmt.Println("")
+}
+
+func listHabits(user *Player) {
+	fmt.Println("")
+	for i := 0; i < len(user.habits); i++ {
+		fmt.Println("Habit ", i)
+		fmt.Println("Title: ", user.habits[i].title)
+		fmt.Println("Description: ", user.habits[i].description)
+		if user.habits[i].positive {
+			fmt.Println("Positive Habit")
+		} else {
+			fmt.Println("Negative Habit")
+		}
+		fmt.Println("Done how many times: ", user.habits[i].counter)
+		fmt.Println("")
+	}
+}
+
+func notifyHabit(user *Player) {
+	var choice = 0
+	var loop = 1
+
+	for loop > 0 {
+		fmt.Println("Which habit do you want to edit?")
+		fmt.Scan(&choice)
+
+		if choice >= len(user.habits) {
+			fmt.Println("Theres no habit with that number")
+			fmt.Println("")
+		} else {
+			user.habits[choice].counter = user.habits[choice].counter + 1
+			loop = -1
+		}
+	}
+
+}
+
 func habits(user *Player) {
 	var loop = 1
 	var choice = 0
@@ -48,20 +121,22 @@ func habits(user *Player) {
 		fmt.Println("List all habits        - 3")
 		fmt.Println("Notify of a habit done - 4")
 		fmt.Println("Close habits           - 5")
+		fmt.Println("")
 
-		fmt.Scanln(&choice)
+		fmt.Scan(&choice)
 
 		switch choice {
 		case 0:
-			//createNewHabit()
+			createNewHabit(user)
 		case 1:
 			//removeHabit()
 		case 2:
 			//updateHabit()
 		case 3:
-			//listHabits()
+			listHabits(user)
 		case 4:
-			//notifyHabit()
+			listHabits(user)
+			notifyHabit(user)
 		case 5:
 			loop = -1
 		default:
