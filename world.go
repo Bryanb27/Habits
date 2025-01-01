@@ -1,9 +1,9 @@
 package main
 
 type World struct {
-	id         int
-	kind       string
-	npcs       []NPC
-	items      []Item
-	mainEvents []string
+	id                    int
+	kind                  string
+	nonplayablecharacters []NonPlayableCharacter
+	items                 []Item
+	mainEvents            []string
 }

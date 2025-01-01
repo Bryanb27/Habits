@@ -1,6 +1,6 @@
 package main
 
-type NPC struct {
+type NonPlayableCharacter struct {
 	name  string
 	items []Item
 }

@@ -10,15 +10,15 @@ import (
 // Possible Erros
 var errInvalidType = fmt.Errorf("Invalid type inserted")
 var errCreatingUser = fmt.Errorf("Unable to create user")
-var errBadPassword = fmt.Errorf("Password easy to find out")
 
-func createUser() (*Player, error) {
+func createUser() (*User, error) {
 	//Data definition
 	var name string = ""
 	var age int = 0
 	var email string = ""
 	var password string = ""
 	var correct int = 1
+	var badPassword bool = true
 
 	for correct > 0 {
 		fmt.Print("What is your name: ")
@@ -33,11 +33,16 @@ func createUser() (*Player, error) {
 		fmt.Print("What is your email: ")
 		fmt.Scanln(&email)
 
-		fmt.Print("What is your password: ")
-		fmt.Scanln(&password)
-		if len(password) < 8 {
-			return nil, errBadPassword
+		for badPassword {
+			fmt.Print("What is your password: ")
+			fmt.Scanln(&password)
+			if len(password) > 8 {
+				badPassword = false
+			} else {
+				fmt.Println("Bad password, try again!")
+			}
 		}
+
 		fmt.Println("")
 		fmt.Println("Is this information correct?")
 		fmt.Println(name)
@@ -51,18 +56,19 @@ func createUser() (*Player, error) {
 		}
 	}
 
-	p := Player{name: name}
+	p := User{name: name}
 	p.setAge(age)
 	p.setEmail(email)
 	p.setPassword(password)
 	return &p, nil
 }
 
-func createNewHabit(user *Player) error {
+func createNewHabit() (*Habit, error) {
 	// Data definition
 	title := ""
 	description := ""
 	positive := false
+	var pos int
 	rand.Seed(time.Now().UnixNano()) // Using this for id for now
 
 	fmt.Print("What is the habit title: ")
@@ -72,10 +78,9 @@ func createNewHabit(user *Player) error {
 	fmt.Scan(&description)
 
 	fmt.Print("Is it positive? Yes[1] or No[0]: ")
-	var pos int
 	fmt.Scan(&pos)
 	if reflect.TypeOf(pos).Kind() != reflect.Int {
-		return errInvalidType
+		return nil, errInvalidType
 	}
 	if pos > 0 {
 		positive = true
@@ -83,34 +88,84 @@ func createNewHabit(user *Player) error {
 		positive = false
 	}
 	habit := Habit{rand.Int(), title, description, positive, 0}
-	user.habits = append(user.habits, habit)
 	fmt.Println("Habit created!!!")
 	fmt.Println("")
-	return nil
+	return &habit, nil
 }
 
-func listHabits(user *Player) {
-	for i := 0; i < len(user.habits); i++ {
-		fmt.Println("Habit ", i)
-		fmt.Println("Title: ", user.habits[i].title)
-		fmt.Println("Description: ", user.habits[i].description)
-		if user.habits[i].positive {
-			fmt.Println("Positive Habit")
+func updateHabit(user *User) error {
+	// Data Definition
+	var choice = 0
+	var loop = 1
+	title := ""
+	description := ""
+	var pos int
+	var change = 0
+	var count = 0
+
+	for loop > 0 {
+		fmt.Println("Which habit do you want to update?")
+		fmt.Scan(&choice)
+
+		if choice >= len(user.habits) {
+			fmt.Println("Theres no habit with that number")
+			fmt.Println("")
 		} else {
-			fmt.Println("Negative Habit")
+			fmt.Print("Old Title: ", user.habits[choice].title)
+			fmt.Print("Old Description: ", user.habits[choice].description)
+			fmt.Print("Was it positive: ", user.habits[choice].positive)
+			fmt.Print("Count: ", user.habits[choice].counter)
+			fmt.Print("")
+
+			fmt.Print("New Title: ", user.habits[choice].title)
+			fmt.Scan(&title)
+			fmt.Print("Description: ", user.habits[choice].description)
+			fmt.Scan(&description)
+			fmt.Print("Is it positive? Yes[1] or No[0]: ")
+			fmt.Scan(&pos)
+			if reflect.TypeOf(pos).Kind() != reflect.Int {
+				return errInvalidType
+			}
+			if pos > 0 {
+				user.habits[choice].positive = true
+			} else {
+				user.habits[choice].positive = false
+			}
+			user.habits[choice].title = title
+			user.habits[choice].description = description
+			fmt.Println("Do you wish to change count or keep it? [1]Change, [0]Keep")
+			fmt.Scan(&count)
+			if change > 0 {
+				fmt.Print("What is the new count: ")
+				fmt.Scan(&count)
+				user.habits[choice].counter = count
+			}
+			fmt.Println("Habit created!!!")
+			listHabit(&user.habits[choice])
+			loop = -1
 		}
-		fmt.Println("Done how many times: ", user.habits[i].counter)
-		fmt.Println("")
 	}
 }
 
-func notifyHabit(user *Player) {
+func listHabit(habit *Habit) {
+	fmt.Println("Title: ", habit.title)
+	fmt.Println("Description: ", habit.description)
+	if habit.positive {
+		fmt.Println("Positive Habit")
+	} else {
+		fmt.Println("Negative Habit")
+	}
+	fmt.Println("Done how many times: ", habit.counter)
+	fmt.Println("")
+}
+
+func notifyHabit(user *User) {
 	// Data Definition
 	var choice = 0
 	var loop = 1
 
 	for loop > 0 {
-		fmt.Println("Which habit do you want to edit?")
+		fmt.Println("Which habit have you done?")
 		fmt.Scan(&choice)
 
 		if choice >= len(user.habits) {
@@ -119,7 +174,7 @@ func notifyHabit(user *Player) {
 		} else {
 			user.habits[choice].counter = user.habits[choice].counter + 1
 			if user.habits[choice].positive {
-				fmt.Printf("Well done, keep on with the streak,")
+				fmt.Printf("Well done, keep on with the streak, ")
 				fmt.Println("now here is what happened: ")
 			} else {
 				fmt.Println("Dont give up, now here is what happened: ")
@@ -130,11 +185,12 @@ func notifyHabit(user *Player) {
 
 }
 
-func habits(user *Player) {
+func habits(user *User) {
 	// Data definition
 	var loop = 1
 	var choice = 0
 	var err error
+	var habit *Habit
 
 	for loop > 0 {
 		fmt.Println("")
@@ -152,19 +208,32 @@ func habits(user *Player) {
 
 		switch choice {
 		case 0:
-			err = createNewHabit(user)
+			habit, err = createNewHabit()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				user.habits = append(user.habits, *habit)
+			}
+		case 2:
+			err = updateHabit(user)
 			if err != nil {
 				fmt.Println(err)
 			}
 		case 3:
-			listHabits(user)
+			for i := 0; i < len(user.habits); i++ {
+				fmt.Println("Habit ", i)
+				listHabit(&user.habits[i])
+			}
 		case 4:
-			listHabits(user)
+			for i := 0; i < len(user.habits); i++ {
+				fmt.Println("Habit ", i)
+				listHabit(&user.habits[i])
+			}
 			notifyHabit(user)
 		case 5:
 			loop = -1
 		default:
-			fmt.Println("This option does not exist - %d", choice)
+			fmt.Println("This option does not exist - ", choice)
 		}
 	}
 
@@ -180,7 +249,7 @@ func main() {
 
 	switch userState {
 	case 0:
-		var user *Player
+		var user *User
 		user, err = createUser()
 		if err != nil {
 			fmt.Println(err)
