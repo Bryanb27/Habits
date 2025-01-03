@@ -11,11 +11,13 @@ password
 */
 type User struct {
 	//id string
-	name     string
-	age      int
-	email    string
-	password string
-	habits   []Habit
+	name      string
+	age       int
+	email     string
+	password  string
+	habits    []Habit
+	character Character
+	world     World
 }
 
 func (u *User) setName(name string) {
