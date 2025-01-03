@@ -104,24 +104,28 @@ func updateHabit(user *User) error {
 	var count = 0
 
 	for loop > 0 {
+		for i := 0; i < len(user.habits); i++ {
+			fmt.Println("Habit ", i)
+			listHabit(&user.habits[i])
+		}
 		fmt.Println("Which habit do you want to update?")
 		fmt.Scan(&choice)
 
-		if choice >= len(user.habits) {
+		if choice >= len(user.habits) || choice < 0 {
 			fmt.Println("Theres no habit with that number")
 			fmt.Println("")
 		} else {
-			fmt.Print("Old Title: ", user.habits[choice].title)
-			fmt.Print("Old Description: ", user.habits[choice].description)
-			fmt.Print("Was it positive: ", user.habits[choice].positive)
-			fmt.Print("Count: ", user.habits[choice].counter)
+			fmt.Println("Old Title: ", user.habits[choice].title)
+			fmt.Println("Old Description: ", user.habits[choice].description)
+			fmt.Println("Was it positive: ", user.habits[choice].positive)
+			fmt.Println("Count: ", user.habits[choice].counter)
 			fmt.Print("")
 
-			fmt.Print("New Title: ", user.habits[choice].title)
+			fmt.Println("New Title: ")
 			fmt.Scan(&title)
-			fmt.Print("Description: ", user.habits[choice].description)
+			fmt.Println("Description: ")
 			fmt.Scan(&description)
-			fmt.Print("Is it positive? Yes[1] or No[0]: ")
+			fmt.Println("Is it positive? Yes[1] or No[0]: ")
 			fmt.Scan(&pos)
 			if reflect.TypeOf(pos).Kind() != reflect.Int {
 				return errInvalidType
@@ -134,7 +138,7 @@ func updateHabit(user *User) error {
 			user.habits[choice].title = title
 			user.habits[choice].description = description
 			fmt.Println("Do you wish to change count or keep it? [1]Change, [0]Keep")
-			fmt.Scan(&count)
+			fmt.Scan(&change)
 			if change > 0 {
 				fmt.Print("What is the new count: ")
 				fmt.Scan(&count)
@@ -145,6 +149,7 @@ func updateHabit(user *User) error {
 			loop = -1
 		}
 	}
+	return nil
 }
 
 func listHabit(habit *Habit) {
@@ -185,6 +190,26 @@ func notifyHabit(user *User) {
 
 }
 
+func deleteHabit(user *User) {
+	var choice = 0
+	var wrongChoice = true
+	for i := 0; i < len(user.habits); i++ {
+		fmt.Println("Habit ", i)
+		listHabit(&user.habits[i])
+	}
+	for wrongChoice {
+		fmt.Println("Which habit do you wish to delete? ")
+		fmt.Scan(&choice)
+		if choice < 0 || choice >= len(user.habits) {
+			fmt.Println("Invalid choice")
+		} else {
+			user.habits = append(user.habits[:choice], user.habits[choice+1:]...)
+			fmt.Println("Habit deleted successfully.")
+			wrongChoice = false
+		}
+	}
+}
+
 func habits(user *User) {
 	// Data definition
 	var loop = 1
@@ -214,15 +239,21 @@ func habits(user *User) {
 			} else {
 				user.habits = append(user.habits, *habit)
 			}
+		case 1:
+			deleteHabit(user)
 		case 2:
 			err = updateHabit(user)
 			if err != nil {
 				fmt.Println(err)
 			}
 		case 3:
-			for i := 0; i < len(user.habits); i++ {
-				fmt.Println("Habit ", i)
-				listHabit(&user.habits[i])
+			if len(user.habits) == 0 {
+				fmt.Println("You dont have any habits yet")
+			} else {
+				for i := 0; i < len(user.habits); i++ {
+					fmt.Println("Habit ", i)
+					listHabit(&user.habits[i])
+				}
 			}
 		case 4:
 			for i := 0; i < len(user.habits); i++ {
