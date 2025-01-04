@@ -1,25 +1,14 @@
-package main
+package pkg
 
-/*
-The character:
-Health bar
-Experience bar
-items
-
-Additional features for character:
-Hunger
-Thirst
-Energy
-*/
 type Character struct {
-	//id string
+	id         int
 	health     int
 	experience int
 	level      int
-	items      []Item
 	food       int
 	water      int
 	energy     int
+	items      []Item
 }
 
 func (c *Character) setHealth(health int) {

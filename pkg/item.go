@@ -1,4 +1,4 @@
-package main
+package pkg
 
 type Item struct {
 	id        int
@@ -7,5 +7,5 @@ type Item struct {
 	rarity    string // e.g., "Common", "Rare", "Epic"
 	minLevel  int    // Minimum character level required
 	spawnRate float64
-	effects   []ItemEffect
+	effects   []Effect
 }

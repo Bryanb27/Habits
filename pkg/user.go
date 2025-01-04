@@ -1,16 +1,9 @@
-package main
+package pkg
 
 import "golang.org/x/crypto/bcrypt"
 
-/*
-User features:
-Name
-age
-email
-password
-*/
 type User struct {
-	//id string
+	id        int
 	name      string
 	age       int
 	email     string
