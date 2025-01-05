@@ -1,8 +1,8 @@
 package pkg
 
 type Effect struct {
-	id         int
-	effectType string
-	value      int
-	duration   int
+	Id         int
+	EffectType string
+	Value      int
+	Duration   int
 }

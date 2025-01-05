@@ -1,68 +1,68 @@
 package pkg
 
 type Character struct {
-	id         int
-	health     int
-	experience int
-	level      int
-	food       int
-	water      int
-	energy     int
-	items      []Item
+	Id         int
+	Health     int
+	Experience int
+	Level      int
+	Food       int
+	Water      int
+	Energy     int
+	Items      []Item
 }
 
-func (c *Character) setHealth(health int) {
-	c.health = health
+func (c *Character) setHealth(Health int) {
+	c.Health = Health
 }
 
 func (c *Character) getHealth() int {
-	return c.health
+	return c.Health
 }
 
-func (c *Character) setExperience(experience int) {
-	c.experience = experience
+func (c *Character) setExperience(Experience int) {
+	c.Experience = Experience
 }
 
 func (c *Character) getExperience() int {
-	return c.experience
+	return c.Experience
 }
 
-func (c *Character) setLevel(level int) {
-	c.level = level
+func (c *Character) setLevel(Level int) {
+	c.Level = Level
 }
 
 func (c *Character) getLevel() int {
-	return c.level
+	return c.Level
 }
 
 func (c *Character) addItem(item Item) {
-	c.items = append(c.items, item)
+	c.Items = append(c.Items, item)
 }
 
 func (c *Character) getItems() []Item {
-	return c.items
+	return c.Items
 }
 
-func (c *Character) setFood(food int) {
-	c.food = food
+func (c *Character) setFood(Food int) {
+	c.Food = Food
 }
 
 func (c *Character) getFood() int {
-	return c.food
+	return c.Food
 }
 
-func (c *Character) setWater(water int) {
-	c.water = water
+func (c *Character) setWater(Water int) {
+	c.Water = Water
 }
 
 func (c *Character) getWater() int {
-	return c.water
+	return c.Water
 }
 
-func (c *Character) setEnergy(energy int) {
-	c.energy = energy
+func (c *Character) setEnergy(Energy int) {
+	c.Energy = Energy
 }
 
 func (c *Character) getEnergy() int {
-	return c.energy
+	return c.Energy
 }

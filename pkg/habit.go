@@ -1,9 +1,9 @@
 package pkg
 
 type Habit struct {
-	id          int
-	title       string
-	description string
-	positive    bool
-	counter     int
+	Id          int
+	Title       string
+	Description string
+	Positive    bool
+	Counter     int
 }

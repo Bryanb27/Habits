@@ -3,59 +3,59 @@ package pkg
 import "golang.org/x/crypto/bcrypt"
 
 type User struct {
-	id        int
-	name      string
-	age       int
-	email     string
-	password  string
-	habits    []Habit
-	character Character
-	world     World
+	Id        int
+	Name      string
+	Age       int
+	Email     string
+	Password  string
+	Habits    []Habit
+	Character Character
+	World     World
 }
 
-func (u *User) setName(name string) {
-	u.name = name
+func (u *User) setName(Name string) {
+	u.Name = Name
 }
 
 func (u *User) getName() string {
-	return u.name
+	return u.Name
 }
 
-func (u *User) setAge(age int) {
-	u.age = age
+func (u *User) setAge(Age int) {
+	u.Age = Age
 }
 
 func (u *User) getAge() int {
-	return u.age
+	return u.Age
 }
 
-func (u *User) setEmail(email string) {
-	u.email = email
+func (u *User) setEmail(Email string) {
+	u.Email = Email
 }
 
 func (u *User) getEmail() string {
-	return u.email
+	return u.Email
 }
 
 // Set a safer password
-func (u *User) setPassword(password string) error {
+func (u *User) SetPassword(password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	u.password = string(hashedPassword)
+	u.Password = string(hashedPassword)
 	return nil
 }
 
-func (u *User) checkPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(u.password), []byte(password))
+func (u *User) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	return err == nil
 }
 
 func (u *User) addHabit(habit Habit) {
-	u.habits = append(u.habits, habit)
+	u.Habits = append(u.Habits, habit)
 }
 
 func (u *User) getHabits() []Habit {
-	return u.habits
+	return u.Habits
 }
