@@ -47,8 +47,8 @@ func (u *User) SetPassword(password string) error {
 	return nil
 }
 
-func (u *User) CheckPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+func CheckPassword(password string, triedPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(password), []byte(triedPassword))
 	return err == nil
 }
 
@@ -58,4 +58,18 @@ func (u *User) addHabit(habit Habit) {
 
 func (u *User) getHabits() []Habit {
 	return u.Habits
+}
+
+func NewUser(id int, name string, age int, email string, password string,
+	charId int, worldId int) User {
+	return User{
+		Id:        id,
+		Name:      name,
+		Age:       age,
+		Email:     email,
+		Password:  password,
+		Habits:    []Habit{},
+		Character: Character{Id: charId},
+		World:     World{Id: worldId},
+	}
 }

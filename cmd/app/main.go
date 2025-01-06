@@ -213,7 +213,6 @@ func deleteHabit(user *pkg.User) {
 }
 
 func Habits(user *pkg.User) {
-	fmt.Print("got here 4")
 	// Data definition
 	var loop = 1
 	var choice = 0
@@ -273,23 +272,99 @@ func Habits(user *pkg.User) {
 
 }
 
+func createNewUser(db *sql.DB) *pkg.User {
+	// Data definition
+	var id, age, charId, worldId int
+	var name, email, password, triedPassword string
+	var tries = 0
+	var user pkg.User
+
+	fmt.Print("What is your email: ")
+	fmt.Scan(&email)
+
+	err := db.QueryRow("SELECT id, name, age, email, password, character_id, world_id FROM users WHERE email = $1", email).Scan(
+		&id, &name, &age, &email, &password, &charId, &worldId,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No user found with that email.")
+		} else {
+			log.Fatal("Error retrieving user:", err)
+		}
+		return nil
+	}
+
+	for tries < 3 {
+		fmt.Print("What is your password: ")
+		fmt.Scan(&triedPassword)
+		if pkg.CheckPassword(password, triedPassword) {
+			user = pkg.NewUser(id, name, age, email, password, charId, worldId)
+			return &user
+		} else {
+			fmt.Println("Wrong Password, try again")
+			tries += 1
+		}
+	}
+
+	fmt.Printf("Too many bad tries")
+	return nil
+}
+
+func createNewCharacter(charId int, db *sql.DB) *pkg.Character {
+	// Data definition
+	var health, exp, level, food, water, energy int
+
+	err := db.QueryRow("SELECT health, experience, level, food, water, energy FROM characters WHERE id = $1", charId).Scan(
+		&health, &exp, &level, &food, &water, &energy,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No character found.")
+		} else {
+			log.Fatal("Error retrieving character:", err)
+		}
+		return nil
+	}
+
+	character := pkg.NewCharacter(charId, health, exp, level, food, water, energy)
+	return &character
+}
+
+func createNewWorld(worldId int, db *sql.DB) *pkg.World {
+	// Data definition
+	var kind string
+
+	err := db.QueryRow("SELECT kind FROM worlds WHERE id = $1", worldId).Scan(
+		&kind,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No world found.")
+		} else {
+			log.Fatal("Error retrieving world:", err)
+		}
+		return nil
+	}
+
+	world := pkg.NewWorld(worldId, kind)
+	return &world
+}
+
 func main() {
 	// Data definition
 	var userState int = 0
 	var kind string = ""
-	var tryPassword string
 
 	fmt.Print("New user[0] or already joined[1]: ")
 	fmt.Scanln(&userState)
 
 	switch userState {
 	case 0:
-		db, err := db.ConnectToDatabase()
-		if err != nil {
-			fmt.Println(err)
-		}
+		db := db.ConnectToDatabase()
+
 		var user *pkg.User
-		user, err = createUser()
+		user, err := createUser()
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -326,112 +401,15 @@ func main() {
 		db.Close()
 
 	case 1:
-
-		db, err := db.ConnectToDatabase()
-		//User
-		var id = 0
-		var name = ""
-		var age = 0
-		var email = ""
-		var password = ""
-		var charId = 0
-		var worldId = 0
-
-		//character
-		var health = 0
-		var exp = 0
-		var level = 0
-		var food = 0
-		var water = 0
-		var energy = 0
-
-		//world
-		var kind = ""
-
-		if err != nil {
-			fmt.Println(err)
-			return
+		db := db.ConnectToDatabase()
+		user := createNewUser(db)
+		if user != nil {
+			//character := createNewCharacter(user.Character.Id, db)
+			//world := createNewWorld(user.World.Id, db)
+			Habits(user)
 		}
+		db.Close()
 
-		fmt.Print("What is your email: ")
-		fmt.Scan(&email)
-
-		fmt.Print("What is your password: ")
-		fmt.Scan(&tryPassword)
-
-		err = db.QueryRow("SELECT id, name, age, email, password, character_id, world_id FROM users WHERE email = $1", email).Scan(
-			&id, &name, &age, &email, &password, &charId, &worldId,
-		)
-
-		if err != nil {
-			if err == sql.ErrNoRows {
-				fmt.Println("No user found with that email.")
-			} else {
-				log.Fatal("Error retrieving user:", err)
-			}
-			return
-		}
-
-		user := pkg.User{
-			Id:        id,
-			Name:      name,
-			Age:       age,
-			Email:     email,
-			Password:  password,
-			Habits:    []pkg.Habit{},
-			Character: pkg.Character{Id: charId},
-			World:     pkg.World{Id: worldId},
-		}
-
-		if user.CheckPassword(tryPassword) {
-			err = db.QueryRow("SELECT health, experience, level, food, water, energy FROM characters WHERE id = $1", user.Character.Id).Scan(
-				&health, &exp, &level, &food, &water, &energy,
-			)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					fmt.Println("No character found.")
-				} else {
-					log.Fatal("Error retrieving character:", err)
-				}
-				return
-			}
-
-			character := pkg.Character{
-				Id:         user.Character.Id,
-				Health:     health,
-				Experience: exp,
-				Level:      level,
-				Food:       food,
-				Water:      water,
-				Energy:     energy,
-			}
-
-			err = db.QueryRow("SELECT kind FROM worlds WHERE id = $1", user.World.Id).Scan(
-				&kind,
-			)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					fmt.Println("No world found.")
-				} else {
-					log.Fatal("Error retrieving world:", err)
-				}
-				return
-			}
-
-			world := pkg.World{
-				Id:                    user.World.Id,
-				Kind:                  kind,
-				Nonplayablecharacters: []pkg.NonPlayableCharacter{},
-			}
-
-			fmt.Println(character)
-			fmt.Println(world)
-
-			Habits(&user)
-			db.Close()
-		} else {
-			fmt.Print("Wrong Password")
-		}
 	default:
 		fmt.Println("%d is not a valid option", userState)
 	}

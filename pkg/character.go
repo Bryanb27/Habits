@@ -66,3 +66,16 @@ func (c *Character) setEnergy(Energy int) {
 func (c *Character) getEnergy() int {
 	return c.Energy
 }
+
+func NewCharacter(id int, health int, experience int, level int, food int,
+	water int, energy int) Character {
+	return Character{
+		Id:         id,
+		Health:     health,
+		Experience: experience,
+		Level:      level,
+		Food:       food,
+		Water:      water,
+		Energy:     energy,
+	}
+}
