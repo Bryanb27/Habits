@@ -272,7 +272,31 @@ func Habits(user *pkg.User) {
 
 }
 
-func createNewUser(db *sql.DB) *pkg.User {
+func createCharacter(db *sql.DB) (characterId int) {
+	var characterID int
+	err := db.QueryRow("INSERT INTO characters (health, experience, level, food, water, energy) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+		100, 0, 1, 50, 50, 100).Scan(&characterID)
+	if err != nil {
+		log.Fatal("Error creating character:", err)
+		return -1
+	} else {
+		return characterID
+	}
+}
+
+func createWorld(db *sql.DB, kind string) (worldId int) {
+	// Create world
+	var worldID int
+	err := db.QueryRow("INSERT INTO worlds (kind) VALUES ($1) RETURNING id", kind).Scan(&worldID)
+	if err != nil {
+		log.Fatal("Error creating world:", err)
+		return -1
+	} else {
+		return worldID
+	}
+}
+
+func retrieveUser(db *sql.DB) *pkg.User {
 	// Data definition
 	var id, age, charId, worldId int
 	var name, email, password, triedPassword string
@@ -311,7 +335,7 @@ func createNewUser(db *sql.DB) *pkg.User {
 	return nil
 }
 
-func createNewCharacter(charId int, db *sql.DB) *pkg.Character {
+func retrieveCharacter(charId int, db *sql.DB) *pkg.Character {
 	// Data definition
 	var health, exp, level, food, water, energy int
 
@@ -331,7 +355,7 @@ func createNewCharacter(charId int, db *sql.DB) *pkg.Character {
 	return &character
 }
 
-func createNewWorld(worldId int, db *sql.DB) *pkg.World {
+func retrieveWorld(worldId int, db *sql.DB) *pkg.World {
 	// Data definition
 	var kind string
 
@@ -363,7 +387,6 @@ func main() {
 	case 0:
 		db := db.ConnectToDatabase()
 
-		var user *pkg.User
 		user, err := createUser()
 		if err != nil {
 			fmt.Println(err)
@@ -372,28 +395,16 @@ func main() {
 		fmt.Println("What kind of world do you wish it to be? [max 50 letters]")
 		fmt.Scan(&kind)
 
-		// Create character
-		var characterID int
-		err = db.QueryRow("INSERT INTO characters (health, experience, level, food, water, energy) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-			100, 0, 1, 50, 50, 100).Scan(&characterID)
-		if err != nil {
-			log.Fatal("Error creating character:", err)
-		}
+		characterID := createCharacter(db)
+		worldID := createWorld(db, kind)
 
-		// Create world
-		var worldID int
-		err = db.QueryRow("INSERT INTO worlds (kind) VALUES ($1) RETURNING id", kind).Scan(&worldID)
-		if err != nil {
-			log.Fatal("Error creating world:", err)
+		// Insert User into database
+		if characterID < 0 || worldID < 0 {
+			log.Fatal("Error creating user: problem while creating character or world!!!")
+		} else {
+			_, err = db.Exec("INSERT INTO users (name, age, email, password, character_id, world_id) VALUES ($1, $2, $3, $4, $5, $6)",
+				user.Name, user.Age, user.Email, user.Password, characterID, worldID)
 		}
-
-		// Create user
-		_, err = db.Exec("INSERT INTO users (name, age, email, password, character_id, world_id) VALUES ($1, $2, $3, $4, $5, $6)",
-			user.Name, user.Age, user.Email, user.Password, characterID, worldID)
-		if err != nil {
-			log.Fatal("Error creating user:", err)
-		}
-
 		fmt.Println("User created successfully")
 
 		Habits(user)
@@ -402,10 +413,10 @@ func main() {
 
 	case 1:
 		db := db.ConnectToDatabase()
-		user := createNewUser(db)
+		user := retrieveUser(db)
 		if user != nil {
-			//character := createNewCharacter(user.Character.Id, db)
-			//world := createNewWorld(user.World.Id, db)
+			//character := retrieveCharacter(user.Character.Id, db)
+			//world := retrieveWorld(user.World.Id, db)
 			Habits(user)
 		}
 		db.Close()
