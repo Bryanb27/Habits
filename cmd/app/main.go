@@ -5,15 +5,10 @@ import (
 	"fmt"
 	"habits/internal/db"
 	"habits/pkg"
-	"log"
 	"reflect"
 )
 
-// Possible Erros
-var errInvalidType = fmt.Errorf("Invalid type inserted")
-var errCreatingUser = fmt.Errorf("Unable to create user")
-
-func createUser() (*pkg.User, error) {
+func createUser() *pkg.User {
 	//Data definition
 	var name, email, password string
 	var age, correct = 0, 0
@@ -26,7 +21,8 @@ func createUser() (*pkg.User, error) {
 		fmt.Print("What is your age: ")
 		fmt.Scanln(&age)
 		if reflect.TypeOf(age).Kind() != reflect.Int {
-			return nil, errInvalidType
+			fmt.Println("Invalid type inserted")
+			return nil
 		}
 
 		fmt.Print("What is your email: ")
@@ -48,13 +44,15 @@ func createUser() (*pkg.User, error) {
 		fmt.Println("No[0] or Yes[1]")
 		fmt.Scanln(&correct)
 		if reflect.TypeOf(correct).Kind() != reflect.Int {
-			return nil, errInvalidType
+			fmt.Println("Invalid type inserted")
+			return nil
 		}
 	}
 
 	p := pkg.User{Name: name, Age: age, Email: email}
 	p.SetPassword(password)
-	return &p, nil
+	fmt.Println("User created sucessfully")
+	return &p
 }
 
 func createNewHabit(userId int, db *sql.DB) {
@@ -93,26 +91,28 @@ func createNewHabit(userId int, db *sql.DB) {
 	}
 }
 
-func updateHabit(user *pkg.User, db *sql.DB) {
+func updateHabit(userId int, db *sql.DB) {
 	// Data Definition
-	var choice, count, change, pos int
+	var count, change, pos int
+	var choice = 0
 	var loop = 1
 	var title, description string
 	var positive bool
 
 	for loop > 0 {
-		listHabits(user.Id, db)
+		listHabits(userId, db)
 		fmt.Println("Which habit do you want to update? (Write its ID)")
 		fmt.Scan(&choice)
 
-		query := `SELECT id, title, description, positive
-		FROM habits
-		WHERE id = $1`
+		query := `SELECT h.id, h.title, h.description, h.positive
+		FROM habits h
+		JOIN user_habits uh ON uh.habit_id = h.id
+		WHERE uh.user_id = $1 AND h.id = $2;`
 
-		err := db.QueryRow(query, choice)
+		_, err := db.Exec(query, userId, choice)
 
 		if err != nil {
-			fmt.Println("Theres no habit with that id")
+			fmt.Println("There was an error: ", err)
 			fmt.Println("")
 		} else {
 			fmt.Println("New Title: ")
@@ -124,16 +124,13 @@ func updateHabit(user *pkg.User, db *sql.DB) {
 			if pos > 0 {
 				positive = true
 			} else {
-				user.Habits[choice].Positive = false
+				positive = false
 			}
-			user.Habits[choice].Title = title
-			user.Habits[choice].Description = description
 			fmt.Println("Do you wish to change count or keep it? [1]Change, [0]Keep")
 			fmt.Scan(&change)
 			if change > 0 {
 				fmt.Print("What is the new count: ")
 				fmt.Scan(&count)
-				user.Habits[choice].Counter = count
 			}
 			err := db.QueryRow("UPDATE habits SET title = $1, description = $2, positive = $3 WHERE id = $4",
 				title, description, positive, choice)
@@ -183,21 +180,31 @@ func listHabits(userId int, db *sql.DB) {
 	}
 }
 
-func notifyHabit(user *pkg.User) {
+func notifyHabit(userId int, db *sql.DB) {
 	// Data Definition
 	var choice = 0
 	var loop = 1
+	var positive = false
+	query := `UPDATE habits
+	SET counter = counter + 1
+	WHERE id = (
+		SELECT habit_id
+		FROM user_habits
+		WHERE user_id = $1 AND habit_id = $2
+	);
+	RETURNING positive`
 
 	for loop > 0 {
 		fmt.Println("Which habit have you done?")
+
 		fmt.Scan(&choice)
 
-		if choice >= len(user.Habits) {
-			fmt.Println("Theres no habit with that number")
+		err := db.QueryRow(query, userId, choice).Scan(&positive)
+		if err == nil {
+			fmt.Println("Problem while updating the habit: ", err)
 			fmt.Println("")
 		} else {
-			user.Habits[choice].Counter = user.Habits[choice].Counter + 1
-			if user.Habits[choice].Positive {
+			if positive == true {
 				fmt.Printf("Well done, keep on with the streak, ")
 				fmt.Println("now here is what happened: ")
 			} else {
@@ -205,6 +212,7 @@ func notifyHabit(user *pkg.User) {
 			}
 			loop = -1
 		}
+
 	}
 
 }
@@ -355,13 +363,13 @@ func Habits(user *pkg.User, db *sql.DB) {
 		case 1:
 			listHabits(user.Id, db)
 		case 2:
-			updateHabit(user, db)
+			updateHabit(user.Id, db)
 		case 3:
 			listHabits(user.Id, db)
 			deleteHabit(user.Id, db)
 		case 4:
 			listHabits(user.Id, db)
-			notifyHabit(user)
+			notifyHabit(user.Id, db)
 		case 5:
 			loop = -1
 		default:
@@ -382,9 +390,9 @@ func main() {
 	case 0:
 		db := db.ConnectToDatabase()
 
-		user, err := createUser()
-		if err != nil {
-			fmt.Println(err)
+		user := createUser()
+		for user == nil {
+			user = createUser()
 		}
 
 		fmt.Println("What kind of world do you wish it to be? [max 50 letters]")
@@ -395,15 +403,19 @@ func main() {
 
 		// Insert User into database
 		if characterID < 0 || worldID < 0 {
-			log.Fatal("Error creating user: problem while creating character or world!!!")
+			fmt.Println("Error creating user: problem while creating character or world!!!")
 		} else {
-			_, err = db.Exec("INSERT INTO users (name, age, email, password, character_id, world_id) VALUES ($1, $2, $3, $4, $5, $6)",
+			_, err := db.Exec("INSERT INTO users (name, age, email, password, character_id, world_id) VALUES ($1, $2, $3, $4, $5, $6)",
 				user.Name, user.Age, user.Email, user.Password, characterID, worldID)
+
+			if err != nil {
+				fmt.Println("Something went wrong while inserting user into database: ", err)
+			} else {
+				fmt.Println("You can now use the application sucessfully")
+
+				Habits(user, db)
+			}
 		}
-		fmt.Println("User created successfully")
-
-		Habits(user, db)
-
 		db.Close()
 
 	case 1:
