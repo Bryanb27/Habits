@@ -55,93 +55,110 @@ func createUser() *pkg.User {
 	return &p
 }
 
-func createNewHabit(userId int, db *sql.DB) {
-	// Data definition
-	var title, description string
-	positive := false
-	var pos, habitId int
-	var counter = 0
-
-	fmt.Print("What is the habit title: ")
-	fmt.Scan(&title)
-
-	fmt.Print("Give it a description: ")
-	fmt.Scan(&description)
-
-	fmt.Print("Is it positive? Yes[1] or No[0]: ")
-	fmt.Scan(&pos)
-	if pos > 0 {
-		positive = true
-	} else {
-		positive = false
-	}
-	err := db.QueryRow("INSERT INTO habits (title, description, positive, counter) VALUES ($1, $2, $3, $4) RETURNING id",
-		title, description, positive, counter).Scan(&habitId)
-	fmt.Println(habitId)
+func createNewHabit(userId int, db *sql.DB) error {
+	title, err := readLine("What is the habit title: ")
 	if err != nil {
-		fmt.Println("Error while inserting into habit: ", err)
-	} else {
-		err := db.QueryRow("INSERT INTO user_habits (user_id, habit_id) VALUES ($1, $2)",
-			userId, habitId)
-		if err != nil {
-			fmt.Println("Error while inserting into user_habits: ", err)
-		} else {
-			fmt.Println("Habit created!!!")
-		}
+		return err
 	}
+	description, err := readLine("Give it a description: ")
+	if err != nil {
+		return err
+	}
+	pos, err := readInt("Is it positive? Yes[1] or No[0]: ")
+	if err != nil {
+		return err
+	}
+	positive := pos > 0
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	var habitId int
+	err = tx.QueryRow(
+		"INSERT INTO habits (title, description, positive, counter) VALUES ($1, $2, $3, $4) RETURNING id",
+		title, description, positive, 0).Scan(&habitId)
+	if err != nil {
+		return fmt.Errorf("insert habit: %w", err)
+	}
+
+	_, err = tx.Exec("INSERT INTO user_habits (user_id, habit_id) VALUES ($1, $2)", userId, habitId)
+	if err != nil {
+		return fmt.Errorf("associate habit to user: %w", err)
+	}
+
+	fmt.Println("Habit created with id:", habitId)
+	return nil
 }
 
-func updateHabit(userId int, db *sql.DB) {
-	// Data Definition
-	var count, change, pos int
-	var choice = 0
-	var loop = 1
-	var title, description string
-	var positive bool
+func updateHabit(userId int, db *sql.DB) error {
+	listHabits(userId, db)
 
-	for loop > 0 {
-		listHabits(userId, db)
-		fmt.Println("Which habit do you want to update? (Write its ID)")
-		fmt.Scan(&choice)
+	choice, err := readInt("Which habit do you want to update? (Write its ID): ")
+	if err != nil {
+		return err
+	}
 
-		query := `SELECT h.id, h.title, h.description, h.positive
-		FROM habits h
-		JOIN user_habits uh ON uh.habit_id = h.id
-		WHERE uh.user_id = $1 AND h.id = $2;`
+	// Check that habit belongs to user
+	var exists bool
+	err = db.QueryRow(
+		`SELECT EXISTS(
+            SELECT 1 FROM user_habits WHERE user_id = $1 AND habit_id = $2
+        )`, userId, choice).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("habit %d is not associated with user %d", choice, userId)
+	}
 
-		_, err := db.Exec(query, userId, choice)
+	title, err := readLine("New Title: ")
+	if err != nil {
+		return err
+	}
+	description, err := readLine("Description: ")
+	if err != nil {
+		return err
+	}
+	pos, err := readInt("Is it positive? Yes[1] or No[0]: ")
+	if err != nil {
+		return err
+	}
+	positive := pos > 0
 
+	change, err := readInt("Do you wish to change count or keep it? [1]Change, [0]Keep: ")
+	if err != nil {
+		return err
+	}
+
+	if change > 0 {
+		count, err := readInt("What is the new count: ")
 		if err != nil {
-			fmt.Println("There was an error: ", err)
-			fmt.Println("")
-		} else {
-			fmt.Println("New Title: ")
-			fmt.Scan(&title)
-			fmt.Println("Description: ")
-			fmt.Scan(&description)
-			fmt.Println("Is it positive? Yes[1] or No[0]: ")
-			fmt.Scan(&pos)
-			if pos > 0 {
-				positive = true
-			} else {
-				positive = false
-			}
-			fmt.Println("Do you wish to change count or keep it? [1]Change, [0]Keep")
-			fmt.Scan(&change)
-			if change > 0 {
-				fmt.Print("What is the new count: ")
-				fmt.Scan(&count)
-			}
-			err := db.QueryRow("UPDATE habits SET title = $1, description = $2, positive = $3 WHERE id = $4",
-				title, description, positive, choice)
-			if err != nil {
-				fmt.Println("Error while updating habit")
-			} else {
-				fmt.Println("Habit updated!!!")
-			}
-			loop = -1
+			return err
+		}
+		_, err = db.Exec("UPDATE habits SET title=$1, description=$2, positive=$3, counter=$4 WHERE id=$5",
+			title, description, positive, count, choice)
+		if err != nil {
+			return fmt.Errorf("update habit: %w", err)
+		}
+	} else {
+		_, err = db.Exec("UPDATE habits SET title=$1, description=$2, positive=$3 WHERE id=$4",
+			title, description, positive, choice)
+		if err != nil {
+			return fmt.Errorf("update habit: %w", err)
 		}
 	}
+
+	fmt.Println("Habit updated.")
+	return nil
 }
 
 func listHabits(userId int, db *sql.DB) {
